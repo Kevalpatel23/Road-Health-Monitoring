@@ -1,0 +1,763 @@
+{% extends "base.html" %}
+
+{% block title %}Road Health Dashboard{% endblock %}
+
+{% block additional_head %}
+<style>
+    /* Base styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        transition: background-color 0.3s, color 0.3s;
+    }
+    
+    /* Card hover effects */
+    .road-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .road-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Condition badges */
+    .condition-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    /* Button styles */
+    .btn {
+        transition: all 0.2s;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+    
+    /* Chart container */
+    .chart-container {
+        position: relative;
+        height: 350px;
+        margin-bottom: 2rem;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+    }
+    
+    .chart-container:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transform: translateY(-2px);
+    }
+    
+    body.dark .chart-container {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    body.dark .chart-container:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Filter buttons */
+    .filter-btn {
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
+    
+    .filter-btn:hover {
+        transform: translateY(-1px);
+    }
+    
+    .filter-btn.active {
+        border: 1px solid currentColor;
+    }
+    
+    /* Search and sort container */
+    .search-sort-container {
+        background-color: white;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+    
+    /* Dark mode styles */
+    body.dark {
+        background-color: #111827;
+        color: #f3f4f6;
+    }
+    
+    body.dark .search-sort-container {
+        background-color: #1f2937;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+    }
+    
+    body.dark .bg-white {
+        background-color: #1f2937;
+        color: #f3f4f6;
+    }
+    
+    body.dark .text-gray-500,
+    body.dark .text-gray-700 {
+        color: #9ca3af;
+    }
+    
+    body.dark .border {
+        border-color: #374151;
+    }
+    
+    body.dark .bg-gray-200 {
+        background-color: #374151;
+        color: #f3f4f6;
+    }
+    
+    body.dark .hover\:bg-gray-300:hover {
+        background-color: #4b5563;
+    }
+    
+    body.dark .bg-blue-500 {
+        background-color: #3b82f6;
+    }
+    
+    body.dark .hover\:bg-blue-600:hover {
+        background-color: #2563eb;
+    }
+    
+    body.dark input,
+    body.dark select {
+        background-color: #374151;
+        color: #f3f4f6;
+        border-color: #4b5563;
+    }
+    
+    body.dark .condition-badge.bg-green-200 {
+        background-color: rgba(16, 185, 129, 0.2);
+        color: #d1fae5;
+    }
+    
+    body.dark .condition-badge.bg-yellow-200 {
+        background-color: rgba(245, 158, 11, 0.2);
+        color: #fef3c7;
+    }
+    
+    body.dark .condition-badge.bg-orange-200 {
+        background-color: rgba(249, 115, 22, 0.2);
+        color: #ffedd5;
+    }
+    
+    body.dark .condition-badge.bg-red-200 {
+        background-color: rgba(239, 68, 68, 0.2);
+        color: #fee2e2;
+    }
+    
+    /* Dark mode toggle button */
+    .dark-mode-toggle {
+        position: relative;
+        width: 50px;
+        height: 24px;
+        border-radius: 12px;
+        background-color: #e5e7eb;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .dark-mode-toggle::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: white;
+        transition: transform 0.3s, background-color 0.3s;
+    }
+    
+    body.dark .dark-mode-toggle {
+        background-color: #3b82f6;
+    }
+    
+    body.dark .dark-mode-toggle::after {
+        transform: translateX(26px);
+        background-color: #1f2937;
+    }
+</style>
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+{% endblock %}
+
+{% block nav %}
+<nav class="bg-white shadow-lg sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between items-center py-4">
+            <div class="flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clip-rule="evenodd" />
+                </svg>
+                <span class="font-bold text-xl">Road Health Monitor</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-600">Light</span>
+                    <div id="darkModeToggle" class="dark-mode-toggle"></div>
+                    <span class="text-sm text-gray-600">Dark</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200 flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 5a1 1 0 10-2 0v4a1 1 0 102 0V8zm-1 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-3xl font-bold">Road Health Dashboard</h1>
+        <div class="text-sm text-gray-500">
+            <span id="lastUpdated">Last updated: Loading...</span>
+        </div>
+    </div>
+    
+    <div class="search-sort-container">
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex-grow">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="text" id="searchInput" placeholder="Search roads by name, condition, or traffic level..." class="pl-10 pr-3 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            <div>
+                <select id="sortSelect" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="name">Sort by Name</option>
+                    <option value="condition">Sort by Condition</option>
+                    <option value="trafficLevel">Sort by Traffic Level</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="roadGrid">
+        <!-- Road cards will be dynamically generated here -->
+    </div>
+    
+    <div class="mt-12 bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-bold mb-6">Road Conditions Overview</h2>
+        <div class="flex flex-col md:flex-row items-start gap-8">
+            <div class="w-full md:w-1/2 lg:w-1/3">
+                <div class="chart-container bg-white p-6 rounded-lg">
+                    <canvas id="roadConditionsChart"></canvas>
+                </div>
+            </div>
+            <div class="w-full md:w-1/2 lg:w-2/3">
+                <h3 class="text-lg font-semibold mb-3">Filter by Condition</h3>
+                <div class="flex flex-wrap gap-3 mb-6" id="conditionFilters">
+                    <!-- Filters will be dynamically added here -->
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-3">Filtered Roads</h3>
+                    <div id="filteredRoadList" class="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
+                        <!-- Filtered road list will be displayed here -->
+                        <p class="text-gray-500">Select conditions above to filter roads</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer_scripts %}
+<script>
+    // Dark mode toggle with localStorage persistence
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    
+    // Check if dark mode preference is stored
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    
+    // Apply dark mode if it was previously enabled
+    if (isDarkMode) {
+        document.body.classList.add('dark');
+    }
+    
+    // Toggle dark mode when button is clicked
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        
+        // Store the preference
+        const isDark = document.body.classList.contains('dark');
+        localStorage.setItem('darkMode', isDark);
+        
+        // Update chart theme only if chart exists
+        if (typeof chart !== 'undefined' && chart) {
+            updateChartTheme();
+        }
+    });
+
+    function updateChartTheme() {
+        // Make sure chart exists before trying to update it
+        if (typeof chart === 'undefined' || !chart) {
+            return;
+        }
+        
+        const isDark = document.body.classList.contains('dark');
+        
+        // Update chart colors
+        chart.options.plugins.legend.labels.color = isDark ? '#f3f4f6' : '#1f2937';
+        chart.options.plugins.title.color = isDark ? '#f3f4f6' : '#1f2937';
+        chart.options.plugins.datalabels.color = isDark ? '#f3f4f6' : '#1f2937';
+        
+        // Update chart background
+        chart.options.plugins.tooltip.backgroundColor = isDark ? '#374151' : 'rgba(255, 255, 255, 0.8)';
+        chart.options.plugins.tooltip.titleColor = isDark ? '#f3f4f6' : '#1f2937';
+        chart.options.plugins.tooltip.bodyColor = isDark ? '#f3f4f6' : '#1f2937';
+        chart.options.plugins.tooltip.borderColor = isDark ? '#4b5563' : '#e5e7eb';
+        
+        chart.update();
+    }
+
+    // Get road data from the page
+    const roads = JSON.parse('{{ roads | tojson | safe }}');
+    
+    // Search and sort functionality
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const roadGrid = document.getElementById('roadGrid');
+
+    function updateRoadGrid() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const sortBy = sortSelect.value;
+
+        // Filter roads based on search term
+        const filteredRoads = roads.filter(road => 
+            road.name.toLowerCase().includes(searchTerm) || 
+            road.condition.toLowerCase().includes(searchTerm) ||
+            road.traffic_level.toLowerCase().includes(searchTerm)
+        );
+
+        // Sort roads based on selected option
+        filteredRoads.sort((a, b) => {
+            if (sortBy === 'name') return a.name.localeCompare(b.name);
+            if (sortBy === 'condition') return a.condition.localeCompare(b.condition);
+            if (sortBy === 'trafficLevel') return a.traffic_level.localeCompare(b.traffic_level);
+            return 0;
+        });
+
+        // Update the road grid
+        roadGrid.innerHTML = '';
+        
+        if (filteredRoads.length === 0) {
+            roadGrid.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="mt-4 text-lg text-gray-500">No roads match your search criteria</p>
+                </div>
+            `;
+            return;
+        }
+        
+        filteredRoads.forEach(road => {
+            const roadCard = document.createElement('div');
+            roadCard.className = 'bg-white p-5 rounded-lg shadow-md road-card';
+            
+            // Determine the icon based on condition
+            let conditionIcon = '';
+            if (road.condition === 'Good') {
+                conditionIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>';
+            } else if (road.condition === 'Fair') {
+                conditionIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>';
+            } else if (road.condition === 'Poor') {
+                conditionIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>';
+            } else if (road.condition === 'Critical') {
+                conditionIcon = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>';
+            }
+            
+            roadCard.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <h2 class="text-xl font-bold">${road.name}</h2>
+                    ${conditionIcon}
+                </div>
+                <div class="space-y-2 mb-4">
+                    <p class="flex items-center">
+                        <span class="w-32 text-gray-600">Condition:</span>
+                        <span class="font-medium condition-badge">${road.condition}</span>
+                    </p>
+                    <p class="flex items-center">
+                        <span class="w-32 text-gray-600">Traffic Level:</span>
+                        <span class="font-medium">${road.traffic_level}</span>
+                    </p>
+                    <p class="flex items-center">
+                        <span class="w-32 text-gray-600">Last Inspected:</span>
+                        <span class="font-medium">${road.last_inspected.split('T')[0]}</span>
+                    </p>
+                </div>
+                <a href="/road_detail/${road.id}" class="block w-full text-center bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-all duration-200 btn">View Details</a>
+            `;
+            roadGrid.appendChild(roadCard);
+        });
+        updateConditionBadges();
+    }
+
+    searchInput.addEventListener('input', updateRoadGrid);
+    sortSelect.addEventListener('change', updateRoadGrid);
+
+    // Road Conditions Chart
+    const roadConditions = roads.map(road => road.condition);
+    const conditionCounts = roadConditions.reduce((acc, condition) => {
+        acc[condition] = (acc[condition] || 0) + 1;
+        return acc;
+    }, {});
+
+    Chart.register(ChartDataLabels);
+
+    // Define better colors for the chart
+    const chartColors = {
+        'Good': {
+            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+            borderColor: 'rgb(16, 185, 129)',
+            hoverBackgroundColor: 'rgba(16, 185, 129, 1)'
+        },
+        'Fair': {
+            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+            borderColor: 'rgb(245, 158, 11)',
+            hoverBackgroundColor: 'rgba(245, 158, 11, 1)'
+        },
+        'Poor': {
+            backgroundColor: 'rgba(249, 115, 22, 0.8)',
+            borderColor: 'rgb(249, 115, 22)',
+            hoverBackgroundColor: 'rgba(249, 115, 22, 1)'
+        },
+        'Critical': {
+            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+            borderColor: 'rgb(239, 68, 68)',
+            hoverBackgroundColor: 'rgba(239, 68, 68, 1)'
+        }
+    };
+
+    // Extract colors in the same order as the labels
+    const labels = Object.keys(conditionCounts);
+    const backgroundColors = labels.map(label => chartColors[label]?.backgroundColor || 'rgba(156, 163, 175, 0.8)');
+    const borderColors = labels.map(label => chartColors[label]?.borderColor || 'rgb(156, 163, 175)');
+    const hoverBackgroundColors = labels.map(label => chartColors[label]?.hoverBackgroundColor || 'rgba(156, 163, 175, 1)');
+
+    const ctx = document.getElementById('roadConditionsChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'doughnut', // Changed from pie to doughnut for a more modern look
+        data: {
+            labels: labels,
+            datasets: [{
+                data: Object.values(conditionCounts),
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
+                hoverBackgroundColor: hoverBackgroundColors,
+                borderWidth: 2,
+                borderRadius: 4, // Rounded segments
+                hoverBorderWidth: 0,
+                spacing: 2, // Add spacing between segments
+                offset: 4 // Slightly offset segments for emphasis
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%', // Size of the center hole
+            layout: {
+                padding: 20
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true,
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true, // Use circular legend markers
+                        pointStyle: 'circle',
+                        font: {
+                            size: 12,
+                            family: "'Inter', sans-serif",
+                            weight: '500'
+                        },
+                        color: document.body.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Road Conditions',
+                    font: {
+                        size: 18,
+                        family: "'Inter', sans-serif",
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    },
+                    color: document.body.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+                },
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        // Don't show labels for hidden segments
+                        if (ctx.chart.getDataVisibility(ctx.dataIndex) === false) {
+                            return null;
+                        }
+                        
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.forEach((data, index) => {
+                            if (ctx.chart.getDataVisibility(index)) {
+                                sum += data;
+                            }
+                        });
+                        
+                        // Only show percentage for segments that are large enough
+                        const percentage = (value*100 / sum);
+                        if (percentage < 5) return null;
+                        
+                        return percentage.toFixed(1) + "%";
+                    },
+                    color: '#fff',
+                    font: {
+                        weight: 'bold',
+                        size: 14,
+                        family: "'Inter', sans-serif"
+                    },
+                    textStrokeColor: 'rgba(0, 0, 0, 0.3)',
+                    textStrokeWidth: 2,
+                    textShadowBlur: 3,
+                    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+                    align: 'center',
+                    anchor: 'center'
+                },
+                tooltip: {
+                    backgroundColor: document.body.classList.contains('dark') ? 'rgba(31, 41, 55, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                    titleColor: document.body.classList.contains('dark') ? '#f3f4f6' : '#1f2937',
+                    bodyColor: document.body.classList.contains('dark') ? '#f3f4f6' : '#1f2937',
+                    borderColor: document.body.classList.contains('dark') ? '#4b5563' : '#e5e7eb',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 12,
+                    boxPadding: 6,
+                    usePointStyle: true,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((acc, val) => acc + val, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} roads (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Add a center text element to the doughnut chart
+    Chart.register({
+        id: 'centerText',
+        beforeDraw: function(chart) {
+            if (chart.config.type === 'doughnut') {
+                // Get the canvas context
+                const ctx = chart.ctx;
+                
+                // Get the visible data
+                let visibleData = [];
+                chart.data.datasets[0].data.forEach((value, index) => {
+                    if (chart.getDataVisibility(index)) {
+                        visibleData.push(value);
+                    }
+                });
+                
+                // Calculate total
+                const total = visibleData.reduce((a, b) => a + b, 0);
+                
+                // Set center text
+                const centerX = ((chart.chartArea.left + chart.chartArea.right) / 2);
+                const centerY = ((chart.chartArea.top + chart.chartArea.bottom) / 2);
+                
+                // Save context for restoration
+                ctx.save();
+                
+                // Draw total count
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = 'bold 24px Inter, sans-serif';
+                ctx.fillStyle = document.body.classList.contains('dark') ? '#f3f4f6' : '#1f2937';
+                ctx.fillText(total, centerX, centerY - 10);
+                
+                // Draw "Roads" label
+                ctx.font = '14px Inter, sans-serif';
+                ctx.fillStyle = document.body.classList.contains('dark') ? '#9ca3af' : '#6b7280';
+                ctx.fillText('Roads', centerX, centerY + 15);
+                
+                // Restore context
+                ctx.restore();
+            }
+        }
+    });
+
+    // Add condition filters
+    const filtersContainer = document.getElementById('conditionFilters');
+    const filteredRoadList = document.getElementById('filteredRoadList');
+    const conditions = Object.keys(conditionCounts);
+    const activeFilters = new Set();
+
+    // Define colors for each condition
+    const conditionColors = {
+        'Good': 'bg-green-100 text-green-800 hover:bg-green-200',
+        'Fair': 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
+        'Poor': 'bg-orange-100 text-orange-800 hover:bg-orange-200',
+        'Critical': 'bg-red-100 text-red-800 hover:bg-red-200'
+    };
+
+    conditions.forEach(condition => {
+        const filterButton = document.createElement('button');
+        filterButton.textContent = `${condition} (${conditionCounts[condition]})`;
+        filterButton.className = `px-4 py-2 rounded-full filter-btn ${conditionColors[condition] || 'bg-gray-200 hover:bg-gray-300'}`;
+        filterButton.addEventListener('click', () => toggleFilter(condition, filterButton));
+        filtersContainer.appendChild(filterButton);
+    });
+
+    function toggleFilter(condition, button) {
+        const datasetIndex = 0;
+        const index = chart.data.labels.indexOf(condition);
+
+        if (activeFilters.has(condition)) {
+            activeFilters.delete(condition);
+            button.classList.remove('active');
+            chart.show(datasetIndex, index);
+        } else {
+            activeFilters.add(condition);
+            button.classList.add('active');
+            chart.hide(datasetIndex, index);
+        }
+
+        // Force chart update to recalculate percentages
+        chart.update();
+        updateFilteredRoadList();
+    }
+
+    function updateFilteredRoadList() {
+        const filteredRoads = roads.filter(road => activeFilters.has(road.condition));
+        filteredRoadList.innerHTML = '';
+        
+        if (activeFilters.size === 0) {
+            filteredRoadList.innerHTML = '<p class="text-gray-500">Select conditions above to filter roads</p>';
+            return;
+        }
+        
+        if (filteredRoads.length === 0) {
+            filteredRoadList.innerHTML = '<p class="text-gray-500">No roads match the selected filters</p>';
+            return;
+        }
+        
+        const ul = document.createElement('ul');
+        ul.className = 'divide-y';
+        
+        filteredRoads.forEach(road => {
+            const li = document.createElement('li');
+            li.className = 'py-2 flex justify-between items-center';
+            li.innerHTML = `
+                <span>${road.name} - ${road.condition}</span>
+                <a href="/road_detail/${road.id}" class="text-blue-500 hover:text-blue-700 text-sm">View</a>
+            `;
+            ul.appendChild(li);
+        });
+        
+        filteredRoadList.appendChild(ul);
+    }
+
+    function updateConditionBadges() {
+        document.querySelectorAll('.condition-badge').forEach(badge => {
+            const condition = badge.textContent.trim();
+            let bgColor = 'bg-gray-200';
+            if (condition === 'Good') bgColor = 'bg-green-200';
+            if (condition === 'Fair') bgColor = 'bg-yellow-200';
+            if (condition === 'Poor') bgColor = 'bg-orange-200';
+            if (condition === 'Critical') bgColor = 'bg-red-200';
+            badge.className = `condition-badge ${bgColor}`;
+        });
+    }
+
+    // Initialize the road grid
+    updateRoadGrid();
+
+    // Add dark mode class to specific elements that need special handling
+    function updateDarkModeElements() {
+        const isDark = document.body.classList.contains('dark');
+        
+        // Update filtered road list background in dark mode
+        const filteredRoadList = document.getElementById('filteredRoadList');
+        if (filteredRoadList) {
+            if (isDark) {
+                filteredRoadList.classList.remove('bg-gray-50');
+                filteredRoadList.classList.add('bg-gray-800');
+            } else {
+                filteredRoadList.classList.remove('bg-gray-800');
+                filteredRoadList.classList.add('bg-gray-50');
+            }
+        }
+        
+        // Update text colors for better contrast in dark mode
+        document.querySelectorAll('.text-gray-500, .text-gray-600').forEach(el => {
+            if (isDark) {
+                el.classList.add('dark-text');
+            } else {
+                el.classList.remove('dark-text');
+            }
+        });
+    }
+    
+    // Call this function initially and whenever dark mode changes
+    updateDarkModeElements();
+    darkModeToggle.addEventListener('click', updateDarkModeElements);
+    
+    // Add keyboard accessibility to dark mode toggle
+    darkModeToggle.setAttribute('tabindex', '0');
+    darkModeToggle.setAttribute('role', 'switch');
+    darkModeToggle.setAttribute('aria-checked', isDarkMode ? 'true' : 'false');
+    darkModeToggle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            darkModeToggle.click();
+            darkModeToggle.setAttribute('aria-checked', document.body.classList.contains('dark') ? 'true' : 'false');
+        }
+    });
+
+    // Set the last updated date
+    const lastUpdatedElement = document.getElementById('lastUpdated');
+    if (lastUpdatedElement) {
+        const now = new Date();
+        const options = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        lastUpdatedElement.textContent = 'Last updated: ' + now.toLocaleDateString('en-US', options);
+    }
+</script>
+{% endblock %}
