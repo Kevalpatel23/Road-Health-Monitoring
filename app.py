@@ -60,6 +60,18 @@ def init_db():
                 location TEXT
             )
         """)
+        
+        # Create a table for storing maintenance requests
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS maintenance_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                road_id INTEGER NOT NULL,
+                description TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                FOREIGN KEY (road_id) REFERENCES roads(id)
+            )
+        """)
+        
         conn.commit()  # Commit the changes to the database
 
 # Call the function to initialize the database
@@ -71,6 +83,10 @@ def session_timeout():
     session.permanent = True
     # Set the lifetime of the permanent session to 30 minutes
     app.permanent_session_lifetime = timedelta(minutes=30)
+
+@app.before_request
+def log_request():
+    print(f"Request: {request.method} {request.path}")
 
 # Authentication decorator
 def login_required(f):
@@ -222,6 +238,27 @@ def add_header(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     
     return response
+
+@app.route('/api/maintenance', methods=['POST'])
+@login_required  # Ensure the user is logged in
+def maintenance():
+    data = request.get_json()  # Get the JSON data from the request
+    road_id = data.get('road_id')  # Extract the road ID
+    description = data.get('description')  # Extract the description
+
+    # Get the current timestamp
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Insert the maintenance request into the database
+    with sqlite3.connect("database.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO maintenance_requests (road_id, description, timestamp)
+            VALUES (?, ?, ?)
+        """, (road_id, description, timestamp))
+        conn.commit()  # Commit the changes to the database
+
+    return jsonify({'message': 'Maintenance request submitted successfully for road ID: {}'.format(road_id)}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)  # Run the app in debug mode

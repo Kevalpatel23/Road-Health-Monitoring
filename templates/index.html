@@ -350,11 +350,40 @@
             road.traffic_level.toLowerCase().includes(searchTerm)
         );
 
+        // Define a custom order for traffic levels
+        const trafficLevelOrder = {
+            'Low': 1,
+            'Medium': 2,
+            'High': 3
+        };
+
         // Sort roads based on selected option
         filteredRoads.sort((a, b) => {
-            if (sortBy === 'name') return a.name.localeCompare(b.name);
-            if (sortBy === 'condition') return a.condition.localeCompare(b.condition);
-            if (sortBy === 'trafficLevel') return a.traffic_level.localeCompare(b.traffic_level);
+            if (sortBy === 'name') {
+                // Extract the numeric part from the road name for proper sorting
+                const nameA = a.name.trim().toLowerCase();
+                const nameB = b.name.trim().toLowerCase();
+                
+                // Use regex to extract the number from the name
+                const numA = parseInt(nameA.match(/\d+/)[0], 10);
+                const numB = parseInt(nameB.match(/\d+/)[0], 10);
+                
+                // Compare the numeric parts first
+                if (numA !== numB) {
+                    return numA - numB; // Sort by number
+                }
+                
+                // If numbers are the same, sort by name
+                return nameA.localeCompare(nameB);
+            }
+            if (sortBy === 'condition') {
+                // Sort conditions case-insensitively
+                return a.condition.toLowerCase().localeCompare(b.condition.toLowerCase());
+            }
+            if (sortBy === 'trafficLevel') {
+                // Sort by traffic level using the defined order
+                return (trafficLevelOrder[a.traffic_level] || 0) - (trafficLevelOrder[b.traffic_level] || 0);
+            }
             return 0;
         });
 
@@ -413,6 +442,7 @@
             roadGrid.appendChild(roadCard);
         });
         updateConditionBadges();
+        console.log(filteredRoads.map(road => road.name));
     }
 
     searchInput.addEventListener('input', updateRoadGrid);
