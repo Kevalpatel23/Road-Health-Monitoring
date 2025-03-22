@@ -494,10 +494,11 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.error) {
-                showNotification('Error: ' + data.error, 'error');
+                if (data.error) { 
+                showNotification('Error: input correct Image type' , 'error');
                 } else {
-                showNotification('Report submitted successfully!', 'success');
+                    console.log(data)
+                showNotification(data.message, data.success?('success'):("error"));
                     loadQueries();
                     this.reset();
                 imagePreview.style.display = 'none';
@@ -507,6 +508,7 @@
             submitBtn.innerHTML = originalBtnText;
         })
         .catch(error => {
+            
             console.error("Error:", error);
             showNotification('An error occurred. Please try again.', 'error');
             submitBtn.disabled = false;

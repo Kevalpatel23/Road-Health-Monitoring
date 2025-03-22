@@ -6,6 +6,7 @@ import sqlite3
 import random
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from utils.inference import ModelInference  # Import the inference class
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder="templates")
@@ -77,6 +78,9 @@ def init_db():
 # Call the function to initialize the database
 init_db()
 
+# Load the YOLO model
+model_inference = ModelInference('path/to/your/model.pt')  # Adjust the path to your .pt file
+
 @app.before_request
 def session_timeout():
     # Set the session to be permanent, meaning it will not expire when the user closes the browser
@@ -125,6 +129,7 @@ def submit_query():
     if 'image' not in request.files or request.files['image'].filename == '':
         return jsonify({'error': 'No image uploaded'}), 400  # Return error if no image is uploaded
     
+    file_path = None  # Initialize file_path variable
     try:
         file = request.files['image']  # Get the uploaded file
         description = request.form['description']  # Get the description from the form
@@ -133,25 +138,38 @@ def submit_query():
         filename = f"{session['user']}_{timestamp}_{file.filename}"  # Create a unique filename
         file_path = os.path.join(UPLOAD_FOLDER, filename)  # Define the file path for saving
         
+        # Validate the file type
+
+        
         print("Saving file to:", file_path)  # Debugging output
         file.save(file_path)  # Save the uploaded file
         
-        image_url = f'/static/uploads/{filename}'  # URL for the uploaded image
-        
-        with sqlite3.connect("database.db") as conn:
-            cursor = conn.cursor()
-            # Insert the query into the database
-            cursor.execute("""
-                INSERT INTO queries (username, timestamp, image_url, description, location)
-                VALUES (?, ?, ?, ?, ?)
-            """, (session['user'], datetime.now().strftime('%Y-%m-%d %H:%M:%S'), image_url, description, location))
-            conn.commit()  # Commit the changes to the database
-        
-        return jsonify({'message': 'Query submitted successfully', 'image_url': image_url})  # Return success message
+        # Run inference on the uploaded image
+        pothole_detected = model_inference.predict(file_path)  # Perform inference
+
+        if pothole_detected:
+            image_url = f'/static/uploads/{filename}'  # URL for the uploaded image
+            
+            with sqlite3.connect("database.db") as conn:
+                cursor = conn.cursor()
+                # Insert the query into the database
+                cursor.execute("""
+                    INSERT INTO queries (username, timestamp, image_url, description, location)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (session['user'], datetime.now().strftime('%Y-%m-%d %H:%M:%S'), image_url, description, location))
+                conn.commit()  # Commit the changes to the database
+            
+            return jsonify({'message': 'Query submitted successfully', 'image_url': image_url,'success': True})  # Return success message
+        else:
+            return jsonify({'message': 'No pothole detected. Image not saved.','success':False}), 200  # Return message if no pothole detected
     
     except Exception as e:
         print("Error:", str(e))  # Debugging output
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)  # Remove the file if an error occurs
         return jsonify({'error': str(e)}), 500  # Handle any other errors
+
+
 
 @app.route('/get_queries')
 def get_queries():
@@ -189,6 +207,7 @@ def road_detail(road_id):
     if road:
         return render_template('road_detail.html', road=road)
     return "Road not found", 404
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -259,6 +278,8 @@ def maintenance():
         conn.commit()  # Commit the changes to the database
 
     return jsonify({'message': 'Maintenance request submitted successfully for road ID: {}'.format(road_id)}), 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)  # Run the app in debug mode
