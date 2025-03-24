@@ -9,15 +9,12 @@ class ModelInference:
 
     def predict(self, image_path) -> bool:
         # Perform inference on the provided image
-        print("THIS IS PREDICT FUNCTION.")
         results = self.model(image_path)
         if results:
             for i, result in enumerate(results):
                 if len(result.boxes):
-                    print("MILGAYA POTHOLE")
                     result.save(os.path.join(image_path))  # Save each result
                 else:
-                    print("KUCH NAHI MILA")
                     os.remove(image_path)
                     return False
         else:
