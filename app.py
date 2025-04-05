@@ -6,6 +6,7 @@ import sqlite3
 import random
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from inference import ModelInference  # Import the inference class
 
 # Initialize the Flask application
 app = Flask(__name__, template_folder="templates")
@@ -17,6 +18,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create the upload folder if it does
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER  # Set the upload folder in app config
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # Set maximum content length to 5 MB
 print("Template folder path:", os.path.abspath("templates"))  # Print the template folder path for debugging
+
+# Define the model path
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'model', 'detection_model.pt')
 
 # Dummy users with hashed passwords for authentication
 users = [
@@ -71,11 +75,25 @@ def init_db():
                 FOREIGN KEY (road_id) REFERENCES roads(id)
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS registered_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                role TEXT DEFAULT 'user',
+                created_at TEXT NOT NULL
+            )
+        """)
         
         conn.commit()  # Commit the changes to the database
 
 # Call the function to initialize the database
 init_db()
+
+# Load the YOLO model
+model_inference = ModelInference(MODEL_PATH)  # Use the correct model path
 
 @app.before_request
 def session_timeout():
@@ -99,12 +117,14 @@ def login_required(f):
 
 # Apply the decorator to all protected routes
 @app.route('/')
-@login_required
 def index():
-    if session.get('role') == 'admin':
-        # Pass the current datetime as 'now'
-        return render_template('index.html', roads=roads, user=session['user'], role=session['role'], now=datetime.now())
-    return redirect(url_for('query_page'))
+    if 'user' in session:
+        if session.get('role') == 'admin':
+            # Pass the current datetime as 'now'
+            return render_template('index.html', roads=roads, user=session['user'], role=session['role'], now=datetime.now())
+        return redirect(url_for('query_page'))
+    # If user is not logged in, show the landing page
+    return render_template('index12.html')
 
 @app.route('/query')
 @login_required
@@ -125,6 +145,7 @@ def submit_query():
     if 'image' not in request.files or request.files['image'].filename == '':
         return jsonify({'error': 'No image uploaded'}), 400  # Return error if no image is uploaded
     
+    file_path = None  # Initialize file_path variable
     try:
         file = request.files['image']  # Get the uploaded file
         description = request.form['description']  # Get the description from the form
@@ -133,25 +154,38 @@ def submit_query():
         filename = f"{session['user']}_{timestamp}_{file.filename}"  # Create a unique filename
         file_path = os.path.join(UPLOAD_FOLDER, filename)  # Define the file path for saving
         
+        # Validate the file type
+
+        
         print("Saving file to:", file_path)  # Debugging output
         file.save(file_path)  # Save the uploaded file
         
-        image_url = f'/static/uploads/{filename}'  # URL for the uploaded image
-        
-        with sqlite3.connect("database.db") as conn:
-            cursor = conn.cursor()
-            # Insert the query into the database
-            cursor.execute("""
-                INSERT INTO queries (username, timestamp, image_url, description, location)
-                VALUES (?, ?, ?, ?, ?)
-            """, (session['user'], datetime.now().strftime('%Y-%m-%d %H:%M:%S'), image_url, description, location))
-            conn.commit()  # Commit the changes to the database
-        
-        return jsonify({'message': 'Query submitted successfully', 'image_url': image_url})  # Return success message
+        # Run inference on the uploaded image
+        pothole_detected = model_inference.predict(file_path)  # Perform inference
+
+        if pothole_detected:
+            image_url = f'/static/uploads/{filename}'  # URL for the uploaded image
+            
+            with sqlite3.connect("database.db") as conn:
+                cursor = conn.cursor()
+                # Insert the query into the database
+                cursor.execute("""
+                    INSERT INTO queries (username, timestamp, image_url, description, location)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (session['user'], datetime.now().strftime('%Y-%m-%d %H:%M:%S'), image_url, description, location))
+                conn.commit()  # Commit the changes to the database
+            
+            return jsonify({'message': 'Query submitted successfully', 'image_url': image_url,'success': True})  # Return success message
+        else:
+            return jsonify({'message': 'No pothole detected. Image not saved.','success':False}), 200  # Return message if no pothole detected
     
     except Exception as e:
         print("Error:", str(e))  # Debugging output
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)  # Remove the file if an error occurs
         return jsonify({'error': str(e)}), 500  # Handle any other errors
+
+
 
 @app.route('/get_queries')
 def get_queries():
@@ -190,6 +224,78 @@ def road_detail(road_id):
         return render_template('road_detail.html', road=road)
     return "Road not found", 404
 
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if 'user' in session:
+        return redirect(url_for('index'))  # Redirect logged-in users to index
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        
+        # Validate form data
+        errors = []
+        
+        # Check if name is provided
+        if not name or len(name.strip()) < 2:
+            errors.append("Name must be at least 2 characters long")
+        
+        # Check if email is valid
+        if not email or '@' not in email:
+            errors.append("Please provide a valid email address")
+        
+        # Check if password is strong enough
+        if not password or len(password) < 8:
+            errors.append("Password must be at least 8 characters long")
+        
+        # Validate passwords match
+        if password != confirm_password:
+            errors.append("Passwords do not match")
+        
+        # If there are validation errors, return to signup page with errors
+        if errors:
+            return render_template('signup.html', errors=errors, name=name, email=email)
+        
+        # Generate a username from the email (part before @)
+        username = email.split('@')[0]
+        
+        # Check if email already exists
+        with sqlite3.connect("database.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM registered_users WHERE email = ?", (email,))
+            if cursor.fetchone():
+                return render_template('signup.html', error="Email already registered", name=name, email=email)
+            
+            # Check if username already exists
+            cursor.execute("SELECT * FROM registered_users WHERE username = ?", (username,))
+            if cursor.fetchone():
+                # If username exists, append a random number
+                import random
+                username = f"{username}{random.randint(1, 999)}"
+            
+            # Hash the password
+            hashed_password = generate_password_hash(password)
+            
+            # Get current timestamp
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Insert the new user
+            try:
+                cursor.execute("""
+                    INSERT INTO registered_users (name, email, username, password, role, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (name, email, username, hashed_password, 'user', timestamp))
+                conn.commit()
+                
+                # Redirect to login page with success message
+                return render_template('login.html', success="Account created successfully! Please sign in.")
+            except sqlite3.Error as e:
+                return render_template('signup.html', error=f"Database error: {str(e)}", name=name, email=email)
+    
+    return render_template('signup.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'user' in session:
@@ -198,14 +304,31 @@ def login():
     if request.method == 'POST':
         username = request.form['username']  # Get the username from the form
         password = request.form['password']  # Get the password from the form
+        
+        # First check predefined users
         user = next((u for u in users if u["username"] == username), None)  # Find the user by username
         if user and check_password_hash(user["password"], password):  # Check if the password is correct
             session['user'] = user['username']  # Store user in session
             session['role'] = user['role']  # Store user role in session
             return redirect(url_for('index'))  # Redirect to index page
-        else:
-            return render_template('login.html', error="Invalid credentials")  # Invalid login
+        
+        # If not found in predefined users, check registered users
+        with sqlite3.connect("database.db") as conn:
+            cursor = conn.cursor()
+            # Check if the username exists in registered_users
+            cursor.execute("SELECT username, password, role FROM registered_users WHERE username = ? OR email = ?", 
+                          (username, username))
+            user_data = cursor.fetchone()
+            
+            if user_data and check_password_hash(user_data[1], password):
+                session['user'] = user_data[0]  # Store username in session
+                session['role'] = user_data[2]  # Store role in session
+                return redirect(url_for('index'))  # Redirect to index page
+        
+        return render_template('login.html', error="Invalid credentials", username=username)  # Invalid login
+    
     return render_template('login.html')  # Render login page
+
 
 @app.route('/logout')
 def logout():
@@ -259,6 +382,8 @@ def maintenance():
         conn.commit()  # Commit the changes to the database
 
     return jsonify({'message': 'Maintenance request submitted successfully for road ID: {}'.format(road_id)}), 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)  # Run the app in debug mode
