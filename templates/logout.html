@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logging Out</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Clear browser history and redirect to login
+        window.onload = function() {
+            // Display logout message
+            document.getElementById('message').textContent = 'Logging you out...';
+            
+            // Clear session storage and local storage
+            sessionStorage.clear();
+            localStorage.removeItem('loggedIn');
+            
+            // Replace the current history state
+            window.history.replaceState(null, '', '/login');
+            
+            // Push a new state to prevent going back
+            window.history.pushState(null, '', '/login');
+            
+            // Add event listener for popstate (back button)
+            window.addEventListener('popstate', function() {
+                // Push another state to prevent going back
+                window.history.pushState(null, '', '/login');
+                
+                // Show alert
+                alert('You have been logged out. Please log in again.');
+            });
+            
+            // Redirect to login page after a short delay
+            setTimeout(function() {
+                window.location.href = '/login';
+            }, 1000);
+        };
+
+        function updateRoadGrid() {
+            const roadContainer = document.getElementById('roadContainer');
+            roadContainer.innerHTML = ''; // Clear existing content
+
+            roads.forEach(road => {
+                const roadCard = document.createElement('div');
+                roadCard.className = 'road-card bg-white p-4 rounded-lg shadow-md transition-transform duration-200 hover:scale-105';
+                roadCard.innerHTML = `
+                    <h3 class="text-lg font-semibold">${road.name}</h3>
+                    <p class="mb-2"><strong>Condition:</strong> <span class="condition-badge ${road.condition.toLowerCase()}">${road.condition}</span></p>
+                    <p><strong>Traffic Level:</strong> ${road.traffic_level}</p>
+                    <a href="/road_detail/${road.id}" class="text-blue-500 hover:text-blue-700">View Details</a>
+                `;
+                roadContainer.appendChild(roadCard);
+            });
+
+            // Hide loading message
+            document.getElementById('loading').style.display = 'none';
+        }
+    </script>
+</head>
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-96 text-center">
+        <h1 class="text-2xl font-bold mb-6">Logging Out</h1>
+        <p id="message">Please wait...</p>
+        <div id="loading" class="text-center py-4">
+            <p>Loading road conditions...</p>
+            <div class="loader"></div>
+        </div>
+    </div>
+</body>
+</html> 

@@ -1,0 +1,7 @@
+Flask
+Werkzeug
+sqlite3
+os
+datetime
+random
+torch 

@@ -1,0 +1,969 @@
+{% extends "base.html" %} {% block title %}Submit a Query{% endblock %} {% block
+nav_title %}Road Issue Reporting{% endblock %} {% block additional_head %}
+<style>
+  /* Form styling */
+  .form-container {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+  }
+
+  .form-container:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Input styling */
+  .form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    font-size: 1rem;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+
+  /* Button styling */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn:active {
+    transform: translateY(0);
+  }
+
+  .btn-primary {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #2563eb;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-success {
+    background-color: #10b981;
+    color: white;
+  }
+
+  .btn-success:hover {
+    background-color: #059669;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+  }
+
+  /* File input styling */
+  .file-input-container {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    width: 100%;
+  }
+
+  .file-input-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    border: 2px dashed #e5e7eb;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .file-input-label:hover {
+    border-color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.05);
+  }
+
+  .file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  .file-preview {
+    max-width: 100%;
+    max-height: 200px;
+    margin-top: 1rem;
+    border-radius: 0.5rem;
+    display: none;
+  }
+
+  /* Query history styling - UPDATED */
+  .query-card {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    margin-bottom: 1rem; /* Reduced margin */
+    background-color: white;
+    display: flex; /* Changed to flex layout */
+    flex-direction: row; /* Horizontal layout */
+    height: 120px; /* Fixed height */
+  }
+
+  .query-card:hover {
+    transform: translateY(-3px); /* Reduced transform */
+    box-shadow: 0 6px 10px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .query-image {
+    width: 120px; /* Smaller fixed width */
+    height: 120px; /* Match card height */
+    object-fit: cover;
+    flex-shrink: 0; /* Prevent image from shrinking */
+  }
+
+  .query-content {
+    padding: 0.75rem; /* Reduced padding */
+    flex-grow: 1; /* Allow content to grow */
+    overflow: hidden; /* Hide overflow */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .query-meta {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem; /* Reduced margin */
+    color: #6b7280;
+    font-size: 0.75rem; /* Smaller font */
+  }
+
+  .query-username {
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .query-description {
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+    font-size: 0.875rem;
+    flex-grow: 1;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+    max-height: 2.6em; /* Fallback for non-WebKit browsers: 2 lines × 1.3 line-height */
+  }
+
+  .query-location {
+    display: flex;
+    align-items: center;
+    color: #6b7280;
+    font-size: 0.75rem; /* Smaller font */
+    margin-top: auto; /* Push to bottom */
+  }
+
+  /* Query history container */
+  .query-history-container {
+    max-height: 560px; /* Limit height */
+    overflow-y: auto; /* Add scrolling */
+    padding-right: 0.5rem; /* Add padding for scrollbar */
+  }
+
+  /* Scrollbar styling */
+  .query-history-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .query-history-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  .query-history-container::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 10px;
+  }
+
+  .query-history-container::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+
+  /* Dark mode adjustments */
+  body.dark .query-history-container::-webkit-scrollbar-track {
+    background: #374151;
+  }
+
+  body.dark .query-history-container::-webkit-scrollbar-thumb {
+    background: #4b5563;
+  }
+
+  body.dark .query-history-container::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  /* View more button */
+  .view-more-btn {
+    display: block;
+    text-align: center;
+    padding: 0.5rem;
+    background-color: #d1d5db;;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #4b5563;
+    transition: all 0.2s;
+  }
+
+  .view-more-btn:hover {
+    background-color: #e5e7eb;
+    color: #1f2937;
+  }
+
+  body.dark .view-more-btn {
+    background-color: #374151;
+    color: #9ca3af;
+  }
+
+  body.dark .view-more-btn:hover {
+    background-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  /* Dark mode styles for query page */
+  body.dark {
+    background-color: #1f2937;
+    color: #f3f4f6;
+  }
+
+  body.dark .form-container {
+    background-color: #374151;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2),
+      0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  body.dark .form-input {
+    background-color: #4b5563;
+    border-color: #6b7280;
+    color: #f3f4f6;
+  }
+
+  body.dark .form-input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+  }
+
+  body.dark .file-input-label {
+    border-color: #6b7280;
+    color: #d1d5db;
+  }
+
+  body.dark .file-input-label:hover {
+    border-color: #60a5fa;
+    background-color: rgba(96, 165, 250, 0.1);
+  }
+
+  body.dark .query-card {
+    background-color: #374151;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2),
+      0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  body.dark .query-username {
+    color: #f3f4f6;
+  }
+
+  body.dark .query-meta,
+  body.dark .query-location {
+    color: #9ca3af;
+  }
+
+  body.dark .query-description:after {
+    background-color: #374151;
+  }
+
+  /* Empty state styling for dark mode */
+  body.dark .empty-state {
+    color: #d1d5db;
+  }
+
+  body.dark .empty-icon {
+    stroke: #9ca3af;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Submit Query Form -->
+    <div>
+      <div class="flex items-center mb-6">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6 text-blue-500 mr-2"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+          />
+        </svg>
+        <h2 class="text-2xl font-bold">Report Road Issue</h2>
+      </div>
+
+      <div class="form-container p-6">
+        <form id="queryForm" enctype="multipart/form-data">
+          <div class="mb-6">
+            <label for="image" class="block font-medium mb-2"
+              >Upload Road Image</label
+            >
+            <div class="file-input-container">
+              <label for="image" class="file-input-label" id="fileInputLabel">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-12 w-12 text-gray-400 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <div>
+                  <p class="font-medium">Click to upload or drag and drop</p>
+                  <p class="text-sm text-gray-500">
+                    Allowed formats: JPG, JPEG, PNG (max. 5MB)
+                  </p>
+                </div>
+              </label>
+              <input
+                type="file"
+                id="image"
+                name="image"
+                accept=".jpg,.jpeg,.png"
+                required
+                class="file-input"
+              />
+              <img id="imagePreview" class="file-preview" alt="Image preview" />
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label for="description" class="block font-medium mb-2"
+              >Description</label
+            >
+            <textarea
+              id="description"
+              name="description"
+              rows="4"
+              required
+              class="form-input"
+              placeholder="Describe the road issue..."
+            ></textarea>
+          </div>
+
+          <div class="mb-6">
+            <label for="location" class="block font-medium mb-2"
+              >Location</label
+            >
+            <div class="flex">
+              <input
+                type="text"
+                id="location"
+                name="location"
+                required
+                class="form-input"
+                placeholder="Enter location or use GPS"
+              />
+              <button
+                type="button"
+                onclick="getLocation()"
+                class="btn btn-success ml-2 flex-shrink-0"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5 mr-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                Use GPS
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-full">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Submit Report
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Query History - UPDATED -->
+    <div>
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6 text-blue-500 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <h2 class="text-2xl font-bold">Recent Reports</h2>
+        </div>
+        <div class="text-sm text-gray-500">
+          <span id="reportCount">Loading...</span>
+        </div>
+      </div>
+
+      <div class="query-history-container">
+        <div id="queryHistory" class="space-y-3">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="loadMoreBtn" class="view-more-btn mt-4 w-full hidden">
+        View More Reports
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block footer_scripts %}
+<script>
+  // File input preview
+  const fileInput = document.getElementById("image");
+  const imagePreview = document.getElementById("imagePreview");
+  const fileInputLabel = document.getElementById("fileInputLabel");
+
+  fileInput.addEventListener("change", function () {
+    if (this.files && this.files[0]) {
+      // Check file type
+      const file = this.files[0];
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        showNotification('Please upload a valid image file (JPG, JPEG, or PNG)', 'error');
+        this.value = ''; // Clear the file input
+        imagePreview.style.display = "none"; // Hide the preview
+        fileInputLabel.style.border = "2px dashed #e5e7eb"; // Reset the border
+        if (imagePreview.src) {
+          URL.revokeObjectURL(imagePreview.src); // Release the object URL
+        }
+        return;
+      }
+      
+      if (!allowedTypes.includes(file.type)) {
+        showNotification('Please upload a valid image file (JPG, JPEG, or PNG)', 'error');
+        this.value = ''; // Clear the file input
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        imagePreview.src = e.target.result;
+        imagePreview.style.display = "block";
+        fileInputLabel.style.border = "2px solid #3b82f6";
+      };
+
+      reader.readAsDataURL(this.files[0]);
+    }
+  });
+
+  // Drag and drop functionality
+  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+    fileInputLabel.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    fileInputLabel.addEventListener(eventName, highlight, false);
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    fileInputLabel.addEventListener(eventName, unhighlight, false);
+  });
+
+  function highlight() {
+    fileInputLabel.classList.add("border-blue-500", "bg-blue-50");
+  }
+
+  function unhighlight() {
+    fileInputLabel.classList.remove("border-blue-500", "bg-blue-50");
+  }
+
+  fileInputLabel.addEventListener("drop", handleDrop, false);
+
+  function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+
+    if (files && files.length) {
+      fileInput.files = files;
+      const event = new Event("change");
+      fileInput.dispatchEvent(event);
+    }
+  }
+
+  // Get location functionality
+  function getLocation() {
+    if (navigator.geolocation) {
+      const locationBtn = document.querySelector(
+        'button[onclick="getLocation()"]'
+      );
+      locationBtn.innerHTML =
+        '<svg class="animate-spin h-5 w-5 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Getting location...';
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          document.getElementById("location").value =
+            position.coords.latitude + ", " + position.coords.longitude;
+          locationBtn.innerHTML =
+            '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg> Use GPS';
+        },
+        (error) => {
+          alert("Error getting location: " + error.message);
+          locationBtn.innerHTML =
+            '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg> Use GPS';
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  }
+
+  // Form submission
+  document
+    .getElementById("queryForm")
+    .addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML =
+        '<svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Submitting...';
+
+      // Check file size before submitting
+      const fileInput = document.getElementById('image');
+      if (fileInput.files.length > 0) {
+        const fileSize = fileInput.files[0].size;
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        
+        if (fileSize > maxSize) {
+          showNotification(`File size exceeds 5MB limit. Please choose a smaller file.`, "error");
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+          return;
+        }
+      }
+
+      let formData = new FormData(this);
+      fetch("/submit_query", {
+        method: "POST",
+        body: formData,
+      })
+        .then(async (response) => {
+          // Check if the response is JSON
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response');
+          }
+
+          if (response.status === 413) {
+            throw new Error('File size exceeds 5MB limit. Please choose a smaller file.');
+          }
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Server error: ${response.status}`);
+          }
+
+          return response.json();
+        })
+        .then((data) => {
+          if (data.error) {
+            showNotification("Error: " + data.error, "error");
+          } else {
+            console.log(data);
+            showNotification(data.message, data.success ? "success" : "error");
+            loadQueries();
+            this.reset();
+            imagePreview.style.display = "none";
+            fileInputLabel.style.border = "2px dashed #e5e7eb";
+          }
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          showNotification(error.message || "An error occurred while submitting the report. Please try again.", "error");
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        });
+    });
+
+  // Show notification
+  function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement("div");
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-500 ease-in-out z-50 ${
+      type === "error" ? "bg-red-500" : "bg-green-500"
+    } text-white`;
+    notification.innerHTML = `
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    ${
+                      type === "error"
+                        ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                        : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />'
+                    }
+                </svg>
+                <span>${message}</span>
+            </div>
+        `;
+
+    // Add to DOM
+    document.body.appendChild(notification);
+
+    // Animate in
+    setTimeout(() => {
+      notification.style.transform = "translateY(0)";
+    }, 10);
+
+    // Remove after delay
+    setTimeout(() => {
+      notification.style.transform = "translateY(-100%)";
+      notification.style.opacity = "0";
+      setTimeout(() => {
+        notification.remove();
+      }, 500);
+    }, 3000);
+  }
+
+  // Global variables for pagination
+  let currentPage = 1;
+  const reportsPerPage = 3; // Limit to 3 reports per page
+  let totalReports = 0;
+  let allQueries = []; // Store all queries
+
+  // Load queries - UPDATED
+  function loadQueries(page = 1, append = false) {
+    const queryHistory = document.getElementById("queryHistory");
+    const reportCount = document.getElementById("reportCount");
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+
+    if (!append) {
+      queryHistory.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+            `;
+      reportCount.textContent = "Loading reports...";
+    }
+
+    fetch(`/get_queries?limit=${reportsPerPage}&page=${page}`)
+      .then((response) => {
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server returned non-JSON response');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const queries = data.queries || data; // Handle both formats
+        totalReports = data.total || queries.length; // Get total if available, otherwise use array length
+
+        if (!append) {
+          queryHistory.innerHTML = "";
+          allQueries = queries; // Store all queries
+        } else {
+          allQueries = allQueries.concat(queries); // Append new queries
+        }
+
+        // Calculate the current page's queries
+        const startIndex = (page - 1) * reportsPerPage;
+        const endIndex = Math.min(startIndex + reportsPerPage, allQueries.length);
+        const currentPageQueries = allQueries.slice(startIndex, endIndex);
+
+        // Update report count with better formatting
+        if (totalReports === 0) {
+          reportCount.textContent = "No reports found";
+        } else {
+          const start = startIndex + 1;
+          const end = Math.min(endIndex, totalReports);
+          reportCount.textContent = `Showing ${start}-${end} of ${totalReports} reports`;
+        }
+
+        if (currentPageQueries.length === 0 && !append) {
+          queryHistory.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <p class="text-lg font-medium">No reports submitted yet</p>
+                        <p class="text-gray-500">Be the first to report a road issue!</p>
+                    </div>
+                `;
+          loadMoreBtn.classList.add("hidden");
+          return;
+        }
+
+        // Only render the current page's queries
+        currentPageQueries.forEach((query) => {
+          const card = document.createElement("div");
+          card.className = "query-card";
+          card.innerHTML = `
+                    <img src="${
+                      query.image_url
+                    }" class="query-image" alt="Road issue">
+                    <div class="query-content">
+                        <div class="query-meta">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span class="query-username">${
+                              query.username
+                            }</span>
+                            <span class="mx-1">•</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>${formatDate(query.timestamp)}</span>
+                        </div>
+                        <p class="query-description" title="${
+                          query.description
+                        }">${query.description}</p>
+                        <div class="query-location">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>${
+                              query.location || "Location not specified"
+                            }</span>
+                        </div>
+                    </div>
+                `;
+          queryHistory.appendChild(card);
+
+          // Add animation
+          setTimeout(() => {
+            card.style.opacity = "1";
+            card.style.transform = "translateY(0)";
+          }, 100);
+        });
+
+        // Show/hide load more button
+        if (page * reportsPerPage < totalReports) {
+          loadMoreBtn.classList.remove("hidden");
+        } else {
+          loadMoreBtn.classList.add("hidden");
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading queries:", error);
+        if (!append) {
+          queryHistory.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                        <div class="flex">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Error: ${error.message}</span>
+                        </div>
+                        <p class="mt-2 text-sm">Please try again later or contact support if the problem persists.</p>
+                    </div>
+                `;
+          reportCount.textContent = "Error loading reports";
+        }
+        loadMoreBtn.classList.add("hidden");
+      });
+  }
+
+  // Format date
+  function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) {
+      return "just now";
+    } else if (diffMin < 60) {
+      return `${diffMin} minute${diffMin > 1 ? "s" : ""} ago`;
+    } else if (diffHour < 24) {
+      return `${diffHour} hour${diffHour > 1 ? "s" : ""} ago`;
+    } else if (diffDay < 7) {
+      return `${diffDay} day${diffDay > 1 ? "s" : ""} ago`;
+    } else {
+      const options = { year: "numeric", month: "short", day: "numeric" };
+      return date.toLocaleDateString("en-US", options);
+    }
+  }
+
+  // Initialize
+  loadQueries(1);
+
+  // Load more button event listener
+  document.getElementById("loadMoreBtn").addEventListener("click", function () {
+    currentPage++;
+    loadQueries(currentPage, true);
+  });
+
+  // Enhanced dark mode handling
+  function updateDarkModeElements() {
+    const isDark = document.body.classList.contains("dark");
+    const fileInputLabel = document.getElementById("fileInputLabel");
+    const formContainer = document.querySelector(".form-container");
+    const formInputs = document.querySelectorAll(".form-input");
+    const queryCards = document.querySelectorAll(".query-card");
+
+    if (isDark) {
+      // File input label
+      fileInputLabel.classList.add("border-gray-600", "text-gray-300");
+      fileInputLabel.classList.remove("border-gray-300", "text-gray-700");
+
+      // Form container
+      formContainer.style.backgroundColor = "#374151";
+
+      // Form inputs
+      formInputs.forEach((input) => {
+        input.style.backgroundColor = "#4b5563";
+        input.style.borderColor = "#6b7280";
+        input.style.color = "#f3f4f6";
+      });
+
+      // Query cards
+      queryCards.forEach((card) => {
+        card.style.backgroundColor = "#374151";
+      });
+    } else {
+      // File input label
+      fileInputLabel.classList.remove("border-gray-600", "text-gray-300");
+      fileInputLabel.classList.add("border-gray-300", "text-gray-700");
+
+      // Form container
+      formContainer.style.backgroundColor = "white";
+
+      // Form inputs
+      formInputs.forEach((input) => {
+        input.style.backgroundColor = "white";
+        input.style.borderColor = "#e5e7eb";
+        input.style.color = "inherit";
+      });
+
+      // Query cards
+      queryCards.forEach((card) => {
+        card.style.backgroundColor = "white";
+      });
+    }
+  }
+
+  // Check for dark mode on page load
+  document.addEventListener("DOMContentLoaded", function () {
+    // Check if dark mode is enabled in localStorage
+    const isDarkMode = localStorage.getItem("theme") === "dark";
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      document.body.classList.add("dark");
+    }
+
+    updateDarkModeElements();
+
+    // Listen for dark mode changes
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (mutation.attributeName === "class") {
+          updateDarkModeElements();
+        }
+      });
+    });
+
+    observer.observe(document.body, { attributes: true });
+  });
+
+  // Add event listener for dark mode toggle in base template
+  window.addEventListener("storage", function (event) {
+    if (event.key === "theme") {
+      if (event.newValue === "dark") {
+        document.documentElement.classList.add("dark");
+        document.body.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.body.classList.remove("dark");
+      }
+      updateDarkModeElements();
+    }
+  });
+</script>
+{% endblock %}

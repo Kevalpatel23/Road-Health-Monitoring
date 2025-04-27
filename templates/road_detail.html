@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}{{ road.name }} Details{% endblock %}
+
+{% block additional_head %}
+<style>
+    body.light-theme {
+  --text-color: black;
+  --bg-color: white;
+}
+
+body.dark-theme {
+  --text-color: white;
+  --bg-color: black;
+}
+
+.submit-maintenance {
+  color: var(--text-color);
+  background-color: var(--bg-color);
+}
+
+.toggle-bar {
+  position: relative;
+  z-index: 10;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+}
+
+    /* Add any additional styles specific to road_detail.html here */
+    .road-detail-container {
+        background-color: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        padding: 1.5rem;
+    }
+
+    .condition-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    /* Dark mode styles */
+    body.dark .road-detail-container {
+        background-color: #374151;
+        color: #f3f4f6;
+    }
+
+    body.dark .condition-badge {
+        color: #f3f4f6;
+    }
+
+    .dark-mode-toggle {
+        position: relative;
+        width: 50px;
+        height: 24px;
+        border-radius: 12px;
+        background-color: #e5e7eb; /* Light mode background */
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .dark-mode-toggle::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: white;
+        transition: transform 0.3s;
+    }
+
+    body.dark .dark-mode-toggle {
+        background-color: #3b82f6; /* Dark mode background */
+    }
+
+    body.dark .dark-mode-toggle::after {
+        transform: translateX(26px);/* Move toggle to the right */
+    }
+
+    body.dark .form-container {
+        background-color: #374151; /* Dark background for the form */
+        color: #f3f4f6; /* Light text color */
+    }
+
+    body.dark .form-input {
+        background-color: #4b5563; /* Dark input background */
+        border-color: #6b7280; /* Darker border color */
+        color: #f3f4f6; /* Light text color */
+    }
+
+    body.dark .form-input:focus {
+        border-color: #60a5fa; /* Focus border color */
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3); /* Focus shadow */
+    }
+
+    .flex {
+        display: flex;
+        align-items: center; /* Center items vertically */
+    }
+</style>
+{% endblock %}
+
+{% block nav %}
+<nav class="bg-white shadow-lg sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between items-center py-4">
+            <div class="flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clip-rule="evenodd" />
+                </svg>
+                <span class="font-bold text-xl">Road Health Monitor</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-600">Light</span>
+                    <div id="darkModeToggle" class="dark-mode-toggle" role="switch" aria-checked="false" tabindex="0"></div>
+                    <span class="text-sm text-gray-600">Dark</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200 flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 5a1 1 0 10-2 0v4a1 1 0 102 0V8zm-1 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="road-detail-container">
+        <h1 class="text-3xl font-bold mb-4">{{ road.name }} Details</h1>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="mb-2"><strong>Condition:</strong> <span class="condition-badge {{ road.condition | lower }}">{{ road.condition }}</span></p>
+                <p class="mb-2"><strong>Traffic Level:</strong> {{ road.traffic_level }}</p>
+                <p class="mb-2"><strong>Speed Limit:</strong> {{ road.speed_limit }} mph</p>
+                <p class="mb-2"><strong>Traffic Density:</strong> {{ road.traffic_density }} vehicles/hour</p>
+                <p class="mb-2"><strong>Weather:</strong> {{ road.weather_condition }}</p>
+            </div>
+            <div>
+                <p class="mb-2"><strong>Last Inspected:</strong> {{ road.last_inspected.split('T')[0] }}</p>
+                <p class="mb-2"><strong>Last Maintenance:</strong> {{ road.last_maintenance.split('T')[0] }}</p>
+                <p class="mb-2"><strong>Upcoming Maintenance:</strong> {{ road.upcoming_maintenance.split('T')[0] }}</p>
+            </div>
+        </div>
+        <div class="mt-6">
+            <h2 class="text-2xl font-bold mb-4">Traffic Density Over Time</h2>
+            <canvas id="trafficDensityChart"></canvas>
+        </div>
+        <div class="mt-6">
+            <h2 class="text-2xl font-bold mb-4">Submit Maintenance Request</h2>
+            <form id="maintenanceForm" class="space-y-4">
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="description" name="description" rows="3" class="mt-1 block w-full px-3 py-2 form-input" placeholder="Describe the road issue..."></textarea>
+                </div>
+                <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Submit Request
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Traffic Density Chart
+    const ctx = document.getElementById('trafficDensityChart').getContext('2d');
+    const trafficData = Array.from({length: 7}, () => Math.floor(Math.random() * 1000));
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+            datasets: [{
+                label: 'Traffic Density',
+                data: trafficData,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Maintenance Request Form
+    document.getElementById('maintenanceForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const description = document.getElementById('description').value;
+        fetch('/api/maintenance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                road_id: "{{ road.id }}",
+                description: description
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            document.getElementById('description').value = '';
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('An error occurred while submitting the request.');
+        });
+    });
+
+    // Dark mode toggle with localStorage persistence
+    const darkModeToggle = document.getElementById('darkModeToggle');
+
+    // Check if dark mode preference is stored
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+    // Apply dark mode if it was previously enabled
+    if (isDarkMode) {
+        document.body.classList.add('dark');
+        darkModeToggle.setAttribute('aria-checked', 'true');
+    }
+
+    // Toggle dark mode when button is clicked
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        
+        // Store the preference
+        const isDark = document.body.classList.contains('dark');
+        localStorage.setItem('darkMode', isDark);
+        darkModeToggle.setAttribute('aria-checked', isDark ? 'true' : 'false');
+        
+        // Update the toggle appearance
+        updateToggleAppearance(isDark);
+    });
+
+    // Update the toggle appearance based on the current mode
+    function updateToggleAppearance(isDark) {
+        if (isDark) {
+            darkModeToggle.style.backgroundColor = '#3b82f6'; // Dark mode color
+            
+        } else {
+            darkModeToggle.style.backgroundColor = '#e5e7eb'; // Light mode color
+            darkModeToggle.style.transform = 'translateX(0)'; // Move toggle to the left
+        }
+    }
+
+    // Initialize toggle appearance on page load
+    updateToggleAppearance(isDarkMode);
+</script>
+{% endblock %}

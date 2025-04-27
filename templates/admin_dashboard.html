@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">Road Health Monitor</h1>
+            <div class="flex items-center space-x-4">
+                <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors duration-200">Logout</button>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg transition-colors duration-200">
+                <h3 class="text-gray-500 dark:text-gray-400 mb-2">Total Complaints</h3>
+                <div class="flex items-center justify-between">
+                    <span class="text-4xl font-bold text-gray-900 dark:text-white" id="totalComplaints">0</span>
+                    <i class="fas fa-clipboard text-blue-500 text-2xl"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg transition-colors duration-200">
+                <h3 class="text-gray-500 dark:text-gray-400 mb-2">Resolved</h3>
+                <div class="flex items-center justify-between">
+                    <span class="text-4xl font-bold text-gray-900 dark:text-white" id="resolvedComplaints">0</span>
+                    <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg transition-colors duration-200">
+                <h3 class="text-gray-500 dark:text-gray-400 mb-2">Pending</h3>
+                <div class="flex items-center justify-between">
+                    <span class="text-4xl font-bold text-gray-900 dark:text-white" id="pendingComplaints">0</span>
+                    <i class="fas fa-clock text-yellow-500 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pothole Reports Section -->
+        <div class="mb-6 flex items-center justify-between">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Pothole Reports</h2>
+            <div class="flex items-center">
+                <span class="text-gray-500 dark:text-gray-400 mr-2">Sort by:</span>
+                <select id="sortSelect" class="bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md px-3 py-1 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
+                    <option value="latest">Latest</option>
+                    <option value="confidence">Confidence Score</option>
+                    <option value="status">Status</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="detectionGrid">
+            <!-- Detection cards will be dynamically generated here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer_scripts %}
+<script>
+    // Function to format date
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    }
+
+    // Function to sort detections
+    function sortDetections(detections, sortBy) {
+        switch(sortBy) {
+            case 'latest':
+                return detections.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            case 'confidence':
+                return detections.sort((a, b) => (b.confidence_score || 0) - (a.confidence_score || 0));
+            case 'status':
+                return detections.sort((a, b) => {
+                    if (a.status === b.status) return 0;
+                    if (a.status === 'resolved') return 1;
+                    if (b.status === 'resolved') return -1;
+                    return 0;
+                });
+            default:
+                return detections;
+        }
+    }
+
+    // Function to update the dashboard
+    async function updateDashboard() {
+        try {
+            const response = await fetch('/api/pothole_detections');
+            if (!response.ok) throw new Error('Failed to fetch detections');
+            
+            const detections = await response.json();
+            const sortBy = document.getElementById('sortSelect').value;
+            const sortedDetections = sortDetections(detections, sortBy);
+            
+            // Update detection grid
+            const detectionGrid = document.getElementById('detectionGrid');
+            detectionGrid.innerHTML = '';
+            
+            if (sortedDetections.length === 0) {
+                detectionGrid.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="mt-4 text-lg text-gray-500 dark:text-gray-400">No pothole detections found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Update statistics
+            const totalComplaints = sortedDetections.length;
+            const resolvedComplaints = sortedDetections.filter(d => d.status === 'resolved').length;
+            const pendingComplaints = totalComplaints - resolvedComplaints;
+            
+            document.getElementById('totalComplaints').textContent = totalComplaints;
+            document.getElementById('resolvedComplaints').textContent = resolvedComplaints;
+            document.getElementById('pendingComplaints').textContent = pendingComplaints;
+            
+            // Render detection cards
+            sortedDetections.forEach(detection => {
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transition-colors duration-200';
+                
+                card.innerHTML = `
+                    <div class="relative">
+                        <img src="${detection.image_url}" alt="Pothole detection" class="w-full h-48 object-cover">
+                        ${detection.confidence_score ? `
+                            <span class="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-sm">
+                                ${(detection.confidence_score * 100).toFixed(1)}% confidence
+                            </span>
+                        ` : ''}
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-gray-500 dark:text-gray-400 text-sm">${formatDate(detection.timestamp)}</p>
+                            <span class="px-2 py-1 rounded-full text-xs ${
+                                detection.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'
+                            }">${detection.status || 'Pending'}</span>
+                        </div>
+                        <p class="text-gray-900 dark:text-white font-medium mb-2">${detection.description || 'No description provided'}</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm">Location: ${detection.location || 'Not specified'}</p>
+                        ${detection.geolocation ? `
+                            <a href="https://www.google.com/maps?q=${detection.geolocation.latitude},${detection.geolocation.longitude}" 
+                               target="_blank" 
+                               class="mt-3 inline-block text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 text-sm transition-colors duration-200">
+                                View on Map
+                            </a>
+                        ` : ''}
+                    </div>
+                `;
+                
+                detectionGrid.appendChild(card);
+            });
+            
+        } catch (error) {
+            console.error('Error updating dashboard:', error);
+            const detectionGrid = document.getElementById('detectionGrid');
+            detectionGrid.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="mt-4 text-lg text-red-500">Error loading detections. Please try again later.</p>
+                </div>
+            `;
+        }
+    }
+    
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+        updateDashboard();
+        
+        // Add event listener for sort select
+        document.getElementById('sortSelect').addEventListener('change', updateDashboard);
+        
+        // Update dashboard every 30 seconds
+        setInterval(updateDashboard, 30000);
+    });
+</script>
+{% endblock %}

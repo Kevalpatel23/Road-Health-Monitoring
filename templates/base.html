@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Road Health Monitor{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% block head_scripts %}{% endblock %}
+    <script>
+        // Configure Tailwind for dark mode
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+    <script>
+        // Store login status in localStorage
+        localStorage.setItem('loggedIn', 'true');
+        
+        // Function to check if the user is still logged in
+        function checkSession() {
+            // First check localStorage
+            if (localStorage.getItem('loggedIn') !== 'true') {
+                // If not logged in according to localStorage, redirect immediately
+                window.location.href = '/login';
+                return;
+            }
+            
+            // Then verify with server
+            fetch('/check_session', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (response.status === 429) {
+                    // Rate limit exceeded, retry after a delay
+                    console.log('Rate limit exceeded, retrying in 5 seconds...');
+                    setTimeout(checkSession, 5000);
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data || !data.logged_in) {
+                    // If not logged in, clear localStorage and redirect
+                    localStorage.removeItem('loggedIn');
+                    alert('Your session has expired or you have been logged out. Please log in again.');
+                    window.location.href = '/login';
+                }
+            })
+            .catch(error => {
+                console.error('Error checking session:', error);
+                // On error, assume session is still valid and retry later
+                setTimeout(checkSession, 5000);
+            });
+        }
+
+        // Check session when page loads
+        document.addEventListener('DOMContentLoaded', checkSession);
+        
+        // Check session when page becomes visible
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                // Add a small delay before checking to avoid rate limits
+                setTimeout(checkSession, 1000);
+            }
+        });
+        
+        // Check session when navigating with back/forward buttons
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                setTimeout(checkSession, 1000);
+            }
+        });
+        
+        // Intercept back/forward button clicks
+        window.addEventListener('popstate', function() {
+            setTimeout(checkSession, 1000);
+        });
+        
+        // Dark mode functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for saved theme preference or use system preference
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            // Apply the theme
+            if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark');
+            }
+        });
+        
+        // Function to toggle dark mode
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                document.body.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+    </script>
+    <style>
+        /* Base dark mode styles */
+        body.dark {
+            background-color: #1f2937;
+            color: #f3f4f6;
+        }
+        
+        body.dark nav {
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+        
+        body.dark footer {
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+    </style>
+    {% block additional_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}bg-gray-100{% endblock %}">
+    {% block nav %}
+    <nav class="bg-white shadow-lg dark:bg-gray-800 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <!-- Logo/Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    <h1 class="text-xl font-bold text-gray-800 dark:text-white transition-colors duration-300">{% block nav_title %}Road Health Monitor{% endblock %}</h1>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" onclick="toggleDarkMode()" class="flex items-center justify-center p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
+                        <!-- Sun icon (for dark mode) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <!-- Moon icon (for light mode) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 block dark:hidden text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    </button>
+                    
+                    <!-- Logout Button -->
+                    <a href="{{ url_for('logout') }}" class="flex items-center text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endblock %}
+
+    {% block content %}{% endblock %}
+    
+    {% block footer %}{% endblock %}
+    
+    {% block footer_scripts %}{% endblock %}
+
+    <!-- Check for dark mode toggle events -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial check
+            updateDarkModeElements();
+            
+            // Listen for dark mode toggle
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            if (darkModeToggle) {
+                darkModeToggle.addEventListener('click', function() {
+                    // This will be called after toggleDarkMode() in base.html
+                    setTimeout(updateDarkModeElements, 50);
+                });
+            }
+            
+            // Also listen for storage events (in case dark mode is toggled in another tab)
+            window.addEventListener('storage', function(event) {
+                if (event.key === 'theme') {
+                    updateDarkModeElements();
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

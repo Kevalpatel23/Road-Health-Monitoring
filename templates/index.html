@@ -1,0 +1,885 @@
+{% extends "base.html" %}
+
+{% block title %}Road Health Dashboard{% endblock %}
+
+{% block additional_head %}
+<style>
+    /* Base styles */
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        transition: background-color 0.3s, color 0.3s;
+    }
+    
+    /* Layout */
+    .dashboard-container {
+        display: flex;
+        min-height: 100vh;
+    }
+    
+    /* Sidebar styles */
+    .sidebar {
+        width: 250px;
+        background-color: #1f2937 !important;
+        color: white;
+        padding: 1.5rem;
+        position: fixed;
+        height: 100vh;
+        overflow-y: auto;
+    }
+    
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #374151;
+        margin-bottom: 1.5rem;  
+    }
+    .sidebar nav{
+        background-color: #1f2937 !important;
+    }
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        color: #9ca3af ;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+        margin-bottom: 0.5rem;
+    }
+    
+    .nav-link:hover, .nav-link.active {
+        background-color: #374151;
+        color: white;
+    }
+    
+    /* Main content */
+    .main-content {
+        flex: 1;
+        margin-left: 250px;
+        padding: 2rem;
+    }
+    
+    /* Dashboard cards */
+    .dashboard-card {
+        background-color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+    
+    /* Dark mode styles */
+    body.dark {
+        background-color: #111827;
+        color: #f3f4f6;
+    }
+    
+    body.dark .dashboard-card {
+        background-color: #1f2937;
+    }
+    
+    body.dark .stat-label {
+        color: #9ca3af;
+    }
+    
+    /* Progress bar */
+    .progress-bar {
+        height: 0.5rem;
+        background-color: #e5e7eb;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background-color: #3b82f6;
+        transition: width 0.3s ease;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .sidebar {
+            width: 0;
+            padding: 0;
+            transform: translateX(-100%);
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar.active {
+            width: 250px;
+            padding: 1.5rem;
+            transform: translateX(0);
+        }
+        
+        .main-content {
+            margin-left: 0;
+        }
+    }
+    
+    select {
+        background-color: #1f2937; /* dark background for dropdowns */
+        color: #f3f4f6;
+        border: 1px solid #374151;
+        transition: background 0.2s, color 0.2s;
+    }
+    select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background-color: #111827;
+    }
+    body:not(.dark) select {
+        background-color: #f3f4f6;
+        color: #1f2937;
+        border: 1px solid #d1d5db;
+    }
+    body:not(.dark) select:focus {
+        background-color: #fff;
+        border-color: #3b82f6;
+    }
+</style>
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+{% endblock %}
+
+{% block nav %}
+<nav class="bg-white shadow-lg sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between items-center py-4">
+            <div class="flex items-center space-x-4">
+                <button id="sidebarToggle" class="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="font-bold text-xl">Road Health Monitor</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 cursor-pointer" id="darkModeToggleArea">
+                    <span class="text-sm text-gray-600">Light</span>
+                    <button id="darkModeToggle" class="dark-mode-toggle w-10 h-5 bg-gray-300 rounded-full relative focus:outline-none">
+                        <span id="darkModeThumb" class="absolute left-0 top-0 w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
+                    </button>
+                    <span class="text-sm text-gray-600">Dark</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200 flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-5-5H3zm7 5a1 1 0 10-2 0v4a1 1 0 102 0V8zm-1 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                    </svg>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clip-rule="evenodd" />
+            </svg>
+            <span class="font-bold text-xl">Road Health</span>
+        </div>
+        <nav>
+            <a href="#dashboard" class="nav-link active">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="#analytics" class="nav-link">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                </svg>
+                Analytics
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Overview -->
+        <div id="dashboard-section" class="section active">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div class="dashboard-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">Total Complaints</p>
+                            <p class="stat-value" id="totalComplaints">0</p>
+                        </div>
+                        <div class="p-3 bg-blue-100 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">Resolved</p>
+                            <p class="stat-value" id="resolvedComplaints">0</p>
+                        </div>
+                        <div class="p-3 bg-green-100 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%" id="resolvedProgress"></div>
+                    </div>
+                </div>
+
+                <div class="dashboard-card">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">Pending</p>
+                            <p class="stat-value" id="pendingComplaints">0</p>
+                        </div>
+                        <div class="p-3 bg-yellow-100 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%" id="pendingProgress"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div class="rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold">Pothole Reports</h2>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">Sort by:</span>
+                            <select id="sortReports" class="px-3 py-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="location">Location</option>
+                            </select>
+                        </div>
+                        <div id="locationSortOptions" class="hidden flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">Reference Location:</span>
+                            <input type="text" id="referenceLocation" placeholder="Enter location (e.g., 'Main Street')" class="px-3 py-1 border rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <button id="sortByLocation" class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">
+                                Sort
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="allReports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- All reports will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics-section" class="section hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Complaints Trend Chart -->
+                <div class="rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">Complaints Trend</h3>
+                    <div class="chart-container">
+                        <canvas id="complaintsTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Status Distribution Chart -->
+                <div class="rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4">Status Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="statusDistributionChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Location Heatmap -->
+                <div class="rounded-lg shadow-lg p-6 lg:col-span-2">
+                    <h3 class="text-xl font-bold mb-4">Location Heatmap</h3>
+                    <div class="chart-container">
+                        <canvas id="locationHeatmapChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block footer_scripts %}
+<script>
+    // Function to update dark mode elements
+    function updateDarkModeElements() {
+        const isDark = document.documentElement.classList.contains('dark');
+        const elements = document.querySelectorAll('.bg-white, .text-gray-900, .text-gray-500, .border-gray-300');
+        
+        elements.forEach(element => {
+            if (isDark) {
+                element.classList.add('dark:bg-gray-800', 'dark:text-white', 'dark:text-gray-400', 'dark:border-gray-600');
+            } else {
+                element.classList.remove('dark:bg-gray-800', 'dark:text-white', 'dark:text-gray-400', 'dark:border-gray-600');
+            }
+        });
+    }
+
+    // Dark mode toggle with localStorage persistence
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const darkModeThumb = document.getElementById('darkModeThumb');
+    const darkModeToggleArea = document.getElementById('darkModeToggleArea');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    // Check if dark mode preference is stored
+    const isDarkMode = localStorage.getItem('theme') === 'dark';
+    
+    // Apply dark mode if it was previously enabled
+    if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+        darkModeThumb.style.transform = 'translateX(100%)';
+        darkModeToggle.classList.add('bg-blue-600');
+    } else {
+        darkModeThumb.style.transform = 'translateX(0)';
+        darkModeToggle.classList.remove('bg-blue-600');
+    }
+    
+    // Toggle dark mode when button or area is clicked
+    function toggleDarkMode() {
+        document.documentElement.classList.toggle('dark');
+        document.body.classList.toggle('dark');
+        const enabled = document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme', enabled ? 'dark' : 'light');
+        if (enabled) {
+            darkModeThumb.style.transform = 'translateX(100%)';
+            darkModeToggle.classList.add('bg-blue-600');
+        } else {
+            darkModeThumb.style.transform = 'translateX(0)';
+            darkModeToggle.classList.remove('bg-blue-600');
+        }
+        updateDarkModeElements();
+    }
+    darkModeToggle.addEventListener('click', toggleDarkMode);
+    darkModeToggleArea.addEventListener('click', function(e) {
+        if (e.target.id !== 'darkModeToggle' && e.target.id !== 'darkModeThumb') {
+            toggleDarkMode();
+        }
+    });
+    
+    // Toggle sidebar on mobile
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+    });
+    
+    // Function to calculate string similarity
+    function calculateStringSimilarity(str1, str2) {
+        str1 = str1.toLowerCase();
+        str2 = str2.toLowerCase();
+        
+        if (str1.includes(str2) || str2.includes(str1)) {
+            return 1;
+        }
+        
+        const words1 = str1.split(/\s+/);
+        const words2 = str2.split(/\s+/);
+        
+        let matches = 0;
+        for (const word1 of words1) {
+            for (const word2 of words2) {
+                if (word1 === word2) {
+                    matches++;
+                }
+            }
+        }
+        
+        return matches / Math.max(words1.length, words2.length);
+    }
+    
+    // Function to update dashboard stats
+    function updateDashboardStats(data) {
+        const totalComplaints = data.queries.length;
+        const resolvedComplaints = data.queries.filter(q => q.status === 'resolved').length;
+        const pendingComplaints = data.queries.filter(q => q.status === 'pending').length;
+        
+        document.getElementById('totalComplaints').textContent = totalComplaints;
+        document.getElementById('resolvedComplaints').textContent = resolvedComplaints;
+        document.getElementById('pendingComplaints').textContent = pendingComplaints;
+        
+        // Update progress bars
+        document.getElementById('resolvedProgress').style.width = `${(resolvedComplaints / totalComplaints) * 100}%`;
+        document.getElementById('pendingProgress').style.width = `${(pendingComplaints / totalComplaints) * 100}%`;
+    }
+    
+    // Function to initialize charts
+    function initializeCharts(data) {
+        // Destroy existing charts if they exist
+        const existingCharts = [
+            Chart.getChart('complaintsTrendChart'),
+            Chart.getChart('statusDistributionChart'),
+            Chart.getChart('locationHeatmapChart')
+        ];
+        
+        existingCharts.forEach(chart => {
+            if (chart) {
+                chart.destroy();
+            }
+        });
+
+        // Complaints Trend Chart
+        const trendCtx = document.getElementById('complaintsTrendChart').getContext('2d');
+        const trendData = processTrendData(data.queries);
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: trendData.labels,
+                datasets: [{
+                    label: 'Complaints',
+                    data: trendData.values,
+                    borderColor: '#3b82f6',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        // Status Distribution Chart
+        const statusCtx = document.getElementById('statusDistributionChart').getContext('2d');
+        const statusData = processStatusData(data.queries);
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Resolved', 'Pending'],
+                datasets: [{
+                    data: [statusData.resolved, statusData.pending],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Location Heatmap Chart
+        const heatmapCtx = document.getElementById('locationHeatmapChart').getContext('2d');
+        const heatmapData = processLocationData(data.queries);
+        new Chart(heatmapCtx, {
+            type: 'bar',
+            data: {
+                labels: heatmapData.locations,
+                datasets: [{
+                    label: 'Complaints',
+                    data: heatmapData.counts,
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Helper functions for data processing
+    function processTrendData(queries) {
+        const last30Days = Array.from({length: 30}, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            return date.toISOString().split('T')[0];
+        }).reverse();
+
+        const counts = last30Days.map(date => 
+            queries.filter(q => q.timestamp.startsWith(date)).length
+        );
+
+        return {
+            labels: last30Days.map(date => new Date(date).toLocaleDateString()),
+            values: counts
+        };
+    }
+
+    function processStatusData(queries) {
+        return {
+            resolved: queries.filter(q => q.status === 'resolved').length,
+            pending: queries.filter(q => q.status === 'pending').length
+        };
+    }
+
+    function processLocationData(queries) {
+        const locationCounts = {};
+        queries.forEach(q => {
+            if (q.location) {
+                locationCounts[q.location] = (locationCounts[q.location] || 0) + 1;
+            }
+        });
+
+        const sortedLocations = Object.entries(locationCounts)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 10);
+
+        return {
+            locations: sortedLocations.map(([loc]) => loc),
+            counts: sortedLocations.map(([,count]) => count)
+        };
+    }
+
+    // Function to update complaint status
+    async function updateComplaintStatus(complaintId, newStatus) {
+        try {
+            const response = await fetch('/update_complaint_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    complaint_id: complaintId,
+                    status: newStatus
+                })
+            });
+            
+            if (response.ok) {
+                // Fetch updated data to ensure we have the latest state
+                const dataResponse = await fetch('/get_queries');
+                const data = await dataResponse.json();
+                
+                // Update the status badge and dataset for the specific card
+                const reportCard = document.querySelector(`.report-card[data-complaint-id="${complaintId}"]`);
+                if (reportCard) {
+                    reportCard.dataset.status = newStatus;
+                    const statusBadge = reportCard.querySelector('.status-badge');
+                    statusBadge.className = `px-2 py-1 text-xs rounded-full status-badge ${
+                        newStatus === 'resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`;
+                    statusBadge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                }
+                
+                // Update dashboard stats with the fresh data
+                const totalComplaints = data.queries.length;
+                const resolvedComplaints = data.queries.filter(q => q.status === 'resolved').length;
+                const pendingComplaints = data.queries.filter(q => q.status === 'pending' || !q.status).length;
+                
+                // Update the dashboard numbers
+                document.getElementById('totalComplaints').textContent = totalComplaints;
+                document.getElementById('resolvedComplaints').textContent = resolvedComplaints;
+                document.getElementById('pendingComplaints').textContent = pendingComplaints;
+                
+                // Update progress bars
+                document.getElementById('resolvedProgress').style.width = `${(resolvedComplaints / totalComplaints) * 100}%`;
+                document.getElementById('pendingProgress').style.width = `${(pendingComplaints / totalComplaints) * 100}%`;
+                
+                // Update all charts
+                const trendChart = Chart.getChart('complaintsTrendChart');
+                const statusChart = Chart.getChart('statusDistributionChart');
+                const heatmapChart = Chart.getChart('locationHeatmapChart');
+                
+                if (trendChart) {
+                    const trendData = processTrendData(data.queries);
+                    trendChart.data.labels = trendData.labels;
+                    trendChart.data.datasets[0].data = trendData.values;
+                    trendChart.update();
+                }
+                
+                if (statusChart) {
+                    const statusData = processStatusData(data.queries);
+                    statusChart.data.datasets[0].data = [statusData.resolved, statusData.pending];
+                    statusChart.update();
+                }
+                
+                if (heatmapChart) {
+                    const heatmapData = processLocationData(data.queries);
+                    heatmapChart.data.labels = heatmapData.locations;
+                    heatmapChart.data.datasets[0].data = heatmapData.counts;
+                    heatmapChart.update();
+                }
+            } else {
+                console.error('Failed to update complaint status');
+            }
+        } catch (error) {
+            console.error('Error updating complaint status:', error);
+        }
+    }
+
+    // Function to load all reports
+    async function loadAllReports() {
+        try {
+            const response = await fetch('/get_queries');
+            const data = await response.json();
+            
+            // Update dashboard stats
+            updateDashboardStats(data);
+            
+            // Initialize charts
+            initializeCharts(data);
+            
+            const reportsContainer = document.getElementById('allReports');
+            
+            if (data.queries.length === 0) {
+                reportsContainer.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="mt-4 text-lg text-gray-500">No pothole reports found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            reportsContainer.innerHTML = data.queries.map(query => `
+                <div class="p-4 rounded-lg shadow-md report-card" 
+                     data-complaint-id="${query.id}"
+                     data-timestamp="${query.timestamp}"
+                     data-location="${query.location || ''}"
+                     data-status="${query.status || 'pending'}">
+                    <div class="mb-4">
+                        <img src="/static/uploads/${query.image_url.split('/').pop()}" alt="Pothole report" class="w-full h-48 object-cover rounded-lg">
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500">${new Date(query.timestamp).toLocaleString()}</span>
+                            <span class="text-sm text-gray-600">By: ${query.username}</span>
+                        </div>
+                        <p class="font-medium">${query.description}</p>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>${query.location || 'Location not specified'}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="px-2 py-1 text-xs rounded-full status-badge ${
+                                query.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                'bg-yellow-100 text-yellow-800'
+                            }">
+                                ${query.status ? query.status.charAt(0).toUpperCase() + query.status.slice(1) : 'Pending'}
+                            </span>
+                            <div class="flex items-center space-x-2">
+                                <select 
+                                    class="px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    onchange="updateComplaintStatus('${query.id}', this.value)"
+                                >
+                                    <option value="pending" ${query.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="resolved" ${query.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading reports:', error);
+        }
+    }
+    
+    // Sort reports
+    document.getElementById('sortReports').addEventListener('change', function(e) {
+        const reportsContainer = document.getElementById('allReports');
+        const locationSortOptions = document.getElementById('locationSortOptions');
+        
+        if (e.target.value === 'location') {
+            locationSortOptions.classList.remove('hidden');
+        } else {
+            locationSortOptions.classList.add('hidden');
+            sortReports(e.target.value);
+        }
+    });
+    
+    // Sort by location
+    document.getElementById('sortByLocation').addEventListener('click', function() {
+        const referenceLocation = document.getElementById('referenceLocation').value.trim();
+        
+        if (!referenceLocation) {
+            alert('Please enter a reference location');
+            return;
+        }
+        
+        const reportsContainer = document.getElementById('allReports');
+        const reports = Array.from(reportsContainer.children);
+        
+        reports.sort((a, b) => {
+            const locationA = a.dataset.location || '';
+            const locationB = b.dataset.location || '';
+            
+            if (!locationA) return 1;
+            if (!locationB) return -1;
+            
+            const similarityA = calculateStringSimilarity(referenceLocation, locationA);
+            const similarityB = calculateStringSimilarity(referenceLocation, locationB);
+            
+            return similarityB - similarityA;
+        });
+        
+        reports.forEach(report => reportsContainer.appendChild(report));
+    });
+    
+    function sortReports(sortBy) {
+        const reportsContainer = document.getElementById('allReports');
+        const reports = Array.from(reportsContainer.children);
+        
+        reports.sort((a, b) => {
+            if (sortBy === 'newest' || sortBy === 'oldest') {
+                const dateA = new Date(a.dataset.timestamp);
+                const dateB = new Date(b.dataset.timestamp);
+                return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+            }
+            return 0;
+        });
+        
+        reports.forEach(report => reportsContainer.appendChild(report));
+    }
+    
+    // Set the last updated date
+    const lastUpdatedElement = document.getElementById('lastUpdated');
+    if (lastUpdatedElement) {
+        const now = new Date();
+        const options = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        lastUpdatedElement.textContent = 'Last updated: ' + now.toLocaleDateString('en-US', options);
+    }
+    
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check for dark mode preference
+        const isDarkMode = localStorage.getItem('theme') === 'dark';
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark');
+        }
+        
+        // Update dark mode elements
+        updateDarkModeElements();
+        
+        // Listen for dark mode changes
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'class') {
+                    updateDarkModeElements();
+                }
+            });
+        });
+        
+        observer.observe(document.documentElement, { attributes: true });
+        
+        // Initialize dashboard
+        loadAllReports();
+        
+        // Update dashboard every 30 seconds
+        setInterval(loadAllReports, 30000);
+    });
+
+    // Add navigation functionality
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = e.currentTarget.getAttribute('href').substring(1) + '-section';
+            
+            // Update active states
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            
+            // Show/hide sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+                section.classList.remove('active');
+            });
+            document.getElementById(targetId).classList.remove('hidden');
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+
+    // Add event listener for dark mode toggle in base template
+    window.addEventListener("storage", function (event) {
+        if (event.key === "theme") {
+            if (event.newValue === "dark") {
+                document.documentElement.classList.add("dark");
+                document.body.classList.add("dark");
+            } else {
+                document.documentElement.classList.remove("dark");
+                document.body.classList.remove("dark");
+            }
+            updateDarkModeElements();
+        }
+    });
+</script>
+{% endblock %}
