@@ -230,14 +230,6 @@ def get_queries():
     except sqlite3.Error as e:
         return jsonify({'error': 'Database error occurred'}), 500
 
-@app.route('/road_detail/<int:road_id>')
-@login_required
-def road_detail(road_id):
-    road = next((r for r in roads if r['id'] == road_id), None)
-    if road:
-        return render_template('road_detail.html', road=road)
-    return "Road not found", 404
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'user' in session:
