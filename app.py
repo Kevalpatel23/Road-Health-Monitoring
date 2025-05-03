@@ -84,7 +84,7 @@ def init_db():
 init_db()
 
 # Load the YOLO model
-model_inference = ModelInference(MODEL_PATH)  # Adjust the path to your .pt file
+model_inference = ModelInference(MODEL_PATH)  # Load model at startup
 
 # Initialize rate limiter with more lenient limits for session checks
 limiter = Limiter(
@@ -274,7 +274,7 @@ def submit_query():
         
         file.save(file_path)  # Save the uploaded file
         
-        # Run inference on the uploaded image
+        # Use the preloaded model
         pothole_detected = model_inference.predict(file_path)
 
         if pothole_detected:

@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 import os
+import time
 
 class ModelInference:
     def __init__(self, model_path):
