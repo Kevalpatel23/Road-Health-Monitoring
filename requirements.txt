@@ -1,7 +1,10 @@
-Flask
-Werkzeug
-sqlite3
-os
-datetime
-random
-torch 
+Flask==2.3.2
+Flask-Limiter==2.8.1
+Flask-Mail==0.9.1
+python-dotenv==1.0.0
+Werkzeug==2.3.7
+sqlite3==2.6.0  # Typically included in Python standard library
+ultralytics==8.0.124  # For YOLO model inference
+torch==1.13.1  # PyTorch for ultralytics
+torchvision==0.14.1  # For image processing
+Pillow==9.5.0  # For image handling

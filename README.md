@@ -1,73 +1,90 @@
-# Flask Road Monitoring System
+# Road Health Monitor 🚧
 
-This is a Flask-based web application for monitoring road conditions, submitting queries with images, and user authentication.
+A smart pothole detection and reporting system that uses AI to identify road damage and streamline maintenance workflows.
 
-## Prerequisites
+![App Screenshot](https://images.unsplash.com/photo-1516822264827-4c33dd76f1ae)
 
-Ensure you have the following installed on your system:
-- Python 3.7+
-- pip (Python package manager)
+## Features ✨
 
-## Setup Instructions
+- **AI-Powered Detection**: YOLO model for accurate pothole identification
+- **Real-time Reporting**: Instant submission with photo evidence
+- **User Management**: Secure authentication with OTP verification
+- **Dashboard Analytics**: Visualize complaint trends and status
+- **Dark Mode**: Eye-friendly interface for all lighting conditions
+- **Responsive Design**: Works on desktop and mobile devices
 
-### 1. Clone the Repository
-```sh
-$ git clone https://github.com/Kevalpatel23/Road-Health-Monitoring
-$ cd Road-Health-Monitoring
+## Tech Stack 💻
+
+- **Backend**: Python Flask
+- **Frontend**: HTML5, Tailwind CSS, JavaScript
+- **AI Model**: Ultralytics YOLO
+- **Database**: SQLite
+- **Email**: Flask-Mail for OTP
+
+## Installation ⚙️
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/yourusername/road-health-monitor.git
+   cd road-health-monitor
+   ```
+
+2. **Set up environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   venv\Scripts\activate    # Windows
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables**:
+   Create a `.env` file:
+   ```env
+   SECRET_KEY=your_secret_key_here
+   MAIL_SERVER=smtp.example.com
+   MAIL_PORT=587
+   MAIL_USERNAME=your_email@example.com
+   MAIL_PASSWORD=your_email_password
+   ```
+
+5. **Initialize database**:
+   ```bash
+   python init_db.py
+   ```
+
+## Usage 🚀
+
+1. **Run the application**:
+   ```bash
+   python app.py
+   ```
+
+2. **Access the web interface**:
+   ```
+   http://localhost:5000
+   ```
+
+3. **Default accounts**:
+   - Admin: `admin/admin123`
+   - User: `user/user123`
+
+## Project Structure 📂
+
 ```
-
-### 2. Create a Virtual Environment (Optional)
-```sh
-$ python -m venv venv
-$ source venv/bin/activate  # On macOS/Linux
-$ venv\Scripts\activate    # On Windows
-```
-
-### 3. Install Dependencies
-```sh
-$ pip install -r requirements.txt
-```
-
-### 4. Initialize the Database
-```sh
-$ python
->>> from app import init_db
->>> init_db()
->>> exit()
-```
-
-### 5. Run the Flask Application
-```sh
-$ python app.py
-```
-
-The application will run on:
-```
-http://127.0.0.1:5000/
-```
-
-## Usage
-- **Login:** Navigate to `/login` to log in using the provided credentials.
-- **Admin Dashboard:** Admin users can monitor road conditions.
-- **Submit Query:** Users can submit queries with images and descriptions.
-- **View Queries:** Queries submitted by users can be viewed by administrators.
-
-## Default Credentials
-- **Admin**
-  - Username: `admin`
-  - Password: `admin123`
-- **User**
-  - Username: `user`
-  - Password: `user123`
-
-## Project Structure
-```
-/
-│── app.py               # Main Flask application
-│── database.db          # SQLite database
-│── requirements.txt     # Required dependencies
-│── static/uploads/      # Directory for uploaded images
-│── templates/           # HTML templates
+road-health-monitor/
+├── app.py # Main application
+├── requirements.txt # Python dependencies
+├── static/
+│ ├── model/ # AI model files
+│ └── uploads/ # User-uploaded images
+├── templates/ # HTML templates
+├── utils/
+│ └── inference.py # Model inference logic
+└── database.db # SQLite database
 ```
 
 ## Additional Notes
@@ -77,4 +94,39 @@ http://127.0.0.1:5000/
 
 ## License
 This project is open-source and can be modified as needed.
+
+## API Endpoints 🌐
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Home/Landing page |
+| `/login` | GET/POST | User authentication |
+| `/signup` | GET/POST | User registration |
+| `/submit_query` | POST | Submit new pothole report |
+| `/get_queries` | GET | Fetch all reports |
+| `/update_complaint_status` | POST | Update report status |
+
+## Contributing 🤝
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License 📜
+
+MIT License - see [LICENSE](LICENSE) for details
+
+## Screenshots 📸
+
+![Dashboard](screenshots/dashboard.png)
+![Mobile View](screenshots/mobile-view.png)
+
+## Future Enhancements 🔮
+
+- [ ] GPS integration for automatic location tagging
+- [ ] Municipal API integration
+- [ ] Severity classification system
+- [ ] Push notifications
 
