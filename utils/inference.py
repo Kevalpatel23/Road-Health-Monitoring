@@ -4,7 +4,7 @@ import os
 class ModelInference:
     def __init__(self, model_path):
         # Load the model
-        self.__model_path = "static\model\detection_model.pt"
+        self.__model_path = os.path.join("static", "model", "detection_model.pt")  # Cross-platform path
         self.model = YOLO(self.__model_path)  # Adjust as needed
         self.confidence_score = 0.0
         self.geolocation = None
