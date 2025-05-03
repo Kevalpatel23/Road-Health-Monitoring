@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.so
+.python-version
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+# Virtual environments
+.venv*/
+venv*/
+# IDE
+.vscode/
+# Environment files
+.env
+*.env
+# Logs and databases
+*.log
+*.sqlite
+*.db
+# Uploads and large files
+static/uploads/*
+!static/uploads/.gitkeep  # Preserve empty directory
+static/model/*
+!static/model/.gitkeep    # Preserve empty directory
+# Machine Learning/Data files
+*.pt
+# Byte-compiled
+*.py[co]
+# Testing
+.pytest_cache/
+# Archives
+*.zip
+*.tar.gz
